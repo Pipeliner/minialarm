@@ -63,3 +63,30 @@ SPEC.md              # the specification (spec-driven development)
 | Instrumentation (Espresso) | The same critical flows on a real Android runtime, with `Intents` verification of the outgoing intent | `./gradlew :app:connectedDebugAndroidTest` | ❌ (needs emulator/device) |
 
 The unit + Robolectric suites (26 tests) run on the JVM with no device.
+
+## Releases
+
+Pushing a `v*` tag (or running the **Release** workflow manually with a tag)
+builds a signed release APK and publishes a GitHub Release with the APK
+attached. The version name is taken from the tag (`v1.2.3` → `1.2.3`) and the
+version code from the workflow run number.
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0   # triggers .github/workflows/release.yml
+```
+
+**Signing.** To sign with your own key, set these repository secrets:
+
+| Secret | Meaning |
+|--------|---------|
+| `SIGNING_KEYSTORE_BASE64` | base64 of your `.jks` keystore (`base64 -w0 release.jks`) |
+| `SIGNING_STORE_PASSWORD` | keystore password |
+| `SIGNING_KEY_ALIAS` | key alias |
+| `SIGNING_KEY_PASSWORD` | key password |
+
+If `SIGNING_KEYSTORE_BASE64` is not set, the workflow generates an ephemeral
+key so the published APK is still installable (noted in the release body).
+Locally, the same `SIGNING_KEYSTORE_FILE` / `SIGNING_STORE_PASSWORD` /
+`SIGNING_KEY_ALIAS` / `SIGNING_KEY_PASSWORD` environment variables drive
+`./gradlew :app:assembleRelease`; absent them, the release build is unsigned.

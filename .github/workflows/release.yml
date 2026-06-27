@@ -1,0 +1,104 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Version tag to release, e.g. v1.0.0"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build, sign & publish APK
+    runs-on: ubuntu-latest
+    env:
+      # Provide these repository secrets to sign with your own key. If absent,
+      # an ephemeral CI key is generated so the APK is still installable.
+      SIGNING_KEYSTORE_BASE64: ${{ secrets.SIGNING_KEYSTORE_BASE64 }}
+      SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
+      SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
+      SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve version from tag
+        id: ver
+        run: |
+          TAG="${{ github.event.inputs.tag || github.ref_name }}"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "name=${TAG#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Prepare signing key
+        id: signing
+        run: |
+          KS="$RUNNER_TEMP/release.jks"
+          if [ -n "$SIGNING_KEYSTORE_BASE64" ]; then
+            echo "Using release keystore from repository secret."
+            echo "$SIGNING_KEYSTORE_BASE64" | base64 -d > "$KS"
+            echo "ephemeral=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "No SIGNING_KEYSTORE_BASE64 secret set; generating an ephemeral key."
+            keytool -genkeypair -v -keystore "$KS" \
+              -storepass minialarm -keypass minialarm -alias minialarm \
+              -keyalg RSA -keysize 2048 -validity 10000 \
+              -dname "CN=MiniAlarm, OU=CI, O=MiniAlarm, C=US"
+            echo "SIGNING_STORE_PASSWORD=minialarm" >> "$GITHUB_ENV"
+            echo "SIGNING_KEY_ALIAS=minialarm" >> "$GITHUB_ENV"
+            echo "SIGNING_KEY_PASSWORD=minialarm" >> "$GITHUB_ENV"
+            echo "ephemeral=true" >> "$GITHUB_OUTPUT"
+          fi
+          echo "SIGNING_KEYSTORE_FILE=$KS" >> "$GITHUB_ENV"
+
+      - name: Build signed release APK
+        env:
+          VERSION_NAME: ${{ steps.ver.outputs.name }}
+          VERSION_CODE: ${{ github.run_number }}
+        run: ./gradlew :app:assembleRelease --no-daemon
+
+      - name: Stage APK
+        id: apk
+        run: |
+          SRC=app/build/outputs/apk/release/app-release.apk
+          OUT="MiniAlarm-${{ steps.ver.outputs.tag }}.apk"
+          cp "$SRC" "$OUT"
+          echo "path=$OUT" >> "$GITHUB_OUTPUT"
+
+      - name: Compose release notes
+        id: notes
+        run: |
+          {
+            echo "Minimal four-digit alarm-setting app — type HH:MM (24h), press Enter, the system alarm is set and the app closes."
+            echo
+            echo "**Artifact:** \`${{ steps.apk.outputs.path }}\` (version ${{ steps.ver.outputs.name }}, build ${{ github.run_number }})."
+            if [ "${{ steps.signing.outputs.ephemeral }}" = "true" ]; then
+              echo
+              echo "> ⚠️ Signed with an ephemeral CI key (no \`SIGNING_KEYSTORE_BASE64\` secret configured). The APK is installable, but successive releases will not be upgrade-compatible. Configure signing secrets for a stable key."
+            fi
+          } > notes.md
+          echo "Wrote release notes."
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.ver.outputs.tag }}
+          name: MiniAlarm ${{ steps.ver.outputs.tag }}
+          body_path: notes.md
+          generate_release_notes: true
+          files: ${{ steps.apk.outputs.path }}

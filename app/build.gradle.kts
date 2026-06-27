@@ -11,9 +11,24 @@ android {
         applicationId = "com.minialarm"
         minSdk = 21
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0"
+        // Version is overridable from CI (release workflow derives it from the tag).
+        versionCode = System.getenv("VERSION_CODE")?.toIntOrNull() ?: 1
+        versionName = System.getenv("VERSION_NAME") ?: "1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    // Release signing is configured from environment variables when present
+    // (set by the release workflow). Absent these, the release build is unsigned.
+    val signingKeystore = System.getenv("SIGNING_KEYSTORE_FILE")
+    signingConfigs {
+        create("release") {
+            if (signingKeystore != null) {
+                storeFile = file(signingKeystore)
+                storePassword = System.getenv("SIGNING_STORE_PASSWORD")
+                keyAlias = System.getenv("SIGNING_KEY_ALIAS")
+                keyPassword = System.getenv("SIGNING_KEY_PASSWORD")
+            }
+        }
     }
 
     buildTypes {
@@ -24,6 +39,9 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            if (signingKeystore != null) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
 
