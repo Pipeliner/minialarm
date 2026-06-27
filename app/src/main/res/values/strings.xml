@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">MiniAlarm</string>
+    <string name="display_description">Alarm time being entered, 24-hour</string>
+    <string name="backspace_description">Backspace</string>
+    <string name="enter_description">Set alarm</string>
+</resources>

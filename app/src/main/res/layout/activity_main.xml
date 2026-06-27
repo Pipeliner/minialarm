@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:padding="16dp">
+
+    <TextView
+        android:id="@+id/display"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="24dp"
+        android:fontFamily="monospace"
+        android:textSize="64sp"
+        android:letterSpacing="0.05"
+        android:contentDescription="@string/display_description"
+        android:text="––:––" />
+
+    <GridLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:columnCount="3"
+        android:rowCount="4"
+        android:useDefaultMargins="true">
+
+        <Button android:id="@+id/key1" android:text="1" style="@style/Key" />
+        <Button android:id="@+id/key2" android:text="2" style="@style/Key" />
+        <Button android:id="@+id/key3" android:text="3" style="@style/Key" />
+
+        <Button android:id="@+id/key4" android:text="4" style="@style/Key" />
+        <Button android:id="@+id/key5" android:text="5" style="@style/Key" />
+        <Button android:id="@+id/key6" android:text="6" style="@style/Key" />
+
+        <Button android:id="@+id/key7" android:text="7" style="@style/Key" />
+        <Button android:id="@+id/key8" android:text="8" style="@style/Key" />
+        <Button android:id="@+id/key9" android:text="9" style="@style/Key" />
+
+        <Button
+            android:id="@+id/keyBack"
+            android:text="⌫"
+            android:contentDescription="@string/backspace_description"
+            style="@style/Key" />
+        <Button android:id="@+id/key0" android:text="0" style="@style/Key" />
+        <Button
+            android:id="@+id/keyEnter"
+            android:text="✓"
+            android:contentDescription="@string/enter_description"
+            style="@style/Key" />
+    </GridLayout>
+
+</LinearLayout>
